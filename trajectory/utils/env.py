@@ -1,6 +1,6 @@
 import os
 import gym
-import d4rl
+#import d4rl
 import torch
 import imageio
 import numpy as np

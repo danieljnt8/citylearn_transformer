@@ -11,7 +11,7 @@ from trajectory.utils.env import vec_rollout, create_env
 from trajectory.models.gpt.ein_linear import EinLinear
 from trajectory.utils.scheduler import GPTScheduler
 from trajectory.utils.common import weight_decay_groups, set_seed
-
+from trajectory.utils.training import update_loss_csv
 
 class GPTTrainer:
     def __init__(
@@ -101,7 +101,7 @@ class GPTTrainer:
     def __get_loss(self, model, batch):
         tokens, targets, loss_pad_mask = batch
         logits, state = model(tokens)
-
+        
         loss = F.cross_entropy(logits.reshape(-1, logits.size(-1)), targets.reshape(-1), reduction="none")
         if self.action_weight != 1 or self.value_weight != 1 or self.reward_weight != 1:
             n_states = int(np.ceil(tokens.shape[1] / model.transition_dim))
@@ -150,10 +150,18 @@ class GPTTrainer:
 
         optimizer = self.get_optimizer(model)
         scheduler = self.get_scheduler(optimizer)
-
-        os.makedirs(self.checkpoints_path, exist_ok=True)
-        if self.checkpoints_path is not None:
-            torch.save(dataloader.dataset.get_discretizer(), os.path.join(self.checkpoints_path, "discretizer.pt"))
+        checkpoints_path = self.checkpoints_path
+        if os.path.exists(checkpoints_path):
+            suffix = 2
+            while True:
+                new_path = f"{checkpoints_path}_{suffix}"
+                if not os.path.exists(new_path):
+                    checkpoints_path = new_path
+                    break
+                suffix += 1
+        os.makedirs(checkpoints_path, exist_ok=True)
+        if checkpoints_path is not None:
+            torch.save(dataloader.dataset.get_discretizer(), os.path.join(checkpoints_path, "discretizer.pt"))
 
         for epoch in trange(1, num_epochs + 1, desc="Training"):
             epoch_losses = []
@@ -169,6 +177,8 @@ class GPTTrainer:
                     torch.nn.utils.clip_grad_norm_(model.parameters(), self.clip_grad)
                 optimizer.step()
 
+                update_loss_csv(iter_value = i , loss = loss.item(),filename=os.path.join(checkpoints_path,"batch_loss.csv"),type_name ="Batch")
+
                 # log here!!
                 epoch_losses.append(loss.item())
                 if i % log_every == 0:
@@ -176,7 +186,8 @@ class GPTTrainer:
                         "train/loss_batch": loss.item(),
                         "train/lr": scheduler.get_current_lr()
                     })
-
+            """
+            NEED TO CHECK THIS FOR EVALUATION
             if epoch % self.eval_every == 0:
                 env_name = dataloader.dataset.get_env_name()
                 discretizer = dataloader.dataset.get_discretizer()
@@ -191,12 +202,14 @@ class GPTTrainer:
                     "eval/score_std": score_std,
                 })
                 print(f"   EVAL {epoch}:", reward_mean, reward_std)
-
-            if self.checkpoints_path is not None and epoch % self.save_every == 0:
-                path = os.path.join(self.checkpoints_path, f"model_{epoch}.pt")
+            """
+            if checkpoints_path is not None and epoch % self.save_every == 0:
+                path = os.path.join(checkpoints_path, f"model_{epoch}.pt")
                 torch.save(model.state_dict(), path)
 
             loss_mean = np.mean(epoch_losses)
+
+            update_loss_csv(iter_value = epoch , loss = loss_mean,filename=os.path.join(checkpoints_path,"epoch_loss.csv"),type_name ="Epoch")
             wandb.log({
                 "train/loss_mean": loss_mean,
                 "train/epoch": epoch
@@ -204,7 +217,8 @@ class GPTTrainer:
 
             print(f'   EPOCH {epoch}:', loss_mean)
 
-        if self.checkpoints_path is not None:
-            torch.save(model.state_dict(), os.path.join(self.checkpoints_path, "model_last.pt"))
+        if checkpoints_path is not None:
+            
+            torch.save(model.state_dict(), os.path.join(checkpoints_path, "model_last.pt"))
 
         return model

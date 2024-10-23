@@ -43,7 +43,7 @@ class KBinsDiscretizer:
         rtol = 1.0e-5
         atol = 1.0e-8
 
-        Xt = np.zeros_like(X, dtype=np.long)
+        Xt = np.zeros_like(X, dtype=np.longlong)
         for jj in range(X.shape[1]):
             # Values which are close to a bin edge are susceptible to numeric
             # instability. Add eps to X so these values are binned correctly

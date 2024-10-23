@@ -1,0 +1,38 @@
+{
+  "citation": "",
+  "description": "",
+  "features": {
+    "observations": {
+      "feature": {
+        "dtype": "float32",
+        "_type": "Value"
+      },
+      "_type": "Sequence"
+    },
+    "next_observations": {
+      "feature": {
+        "dtype": "float32",
+        "_type": "Value"
+      },
+      "_type": "Sequence"
+    },
+    "actions": {
+      "feature": {
+        "dtype": "float32",
+        "_type": "Value"
+      },
+      "_type": "Sequence"
+    },
+    "rewards": {
+      "dtype": "float64",
+      "_type": "Value"
+    },
+    "dones": {
+      "dtype": "bool",
+      "_type": "Value"
+    },
+    "info": {}
+  },
+  "homepage": "",
+  "license": ""
+}

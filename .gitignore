@@ -5,3 +5,7 @@ data
 rollouts
 wandb
 checkpoints
+/data_interactions/
+/pretrained_citylearn/
+/Testing_Notebook/
+
